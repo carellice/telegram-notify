@@ -56,6 +56,7 @@ Config lives in `~/.claude/telegram-notify/config.json`. The environment variabl
 | `/telegram link` | Set the default chat (private chat, group or channel) |
 | `/telegram link session` | Use another chat for this session only |
 | `/telegram link session reset` | This session goes back to the default chat |
+| `/telegram help` | List every command and what it does |
 
 ### Groups, channels and per-session chats
 

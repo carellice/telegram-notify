@@ -1,7 +1,7 @@
 ---
 name: telegram
-description: Send Claude Code recaps, links and attachments to the user's Telegram. Use for /telegram, "send me this on Telegram", "mandamelo su Telegram", to turn automatic Telegram recaps on/off for this session or globally, or to send recaps to a Telegram group or channel. Subcommands - setup, on, on global, off, off global, status, test, link, or no argument to send a recap now.
-argument-hint: "[setup | on [global] | off [global] | status | test | link [session [reset]] | <note>]"
+description: Send Claude Code recaps, links and attachments to the user's Telegram. Use for /telegram, "send me this on Telegram", "mandamelo su Telegram", to turn automatic Telegram recaps on/off for this session or globally, or to send recaps to a Telegram group or channel. Subcommands - help, setup, on, on global, off, off global, status, test, link, or no argument to send a recap now.
+argument-hint: "[help | setup | on [global] | off [global] | status | test | link [session [reset]] | <note>]"
 ---
 
 # telegram-notify
@@ -33,6 +33,9 @@ tell the user setup is needed and continue with **setup**.
   Claude Code session on this computer sends a recap after each prompt.
 - **status**: run `status --session <SID>` and report in one or two lines.
 - **test**: run `test --session <SID>`.
+- **help** (or "comandi", "commands", "?"): run `help` and show its list to the user,
+  translated into the user's language, keeping the same groups and order. Use one Markdown
+  table per group (command | what it does). Commands stay verbatim. Add nothing else.
 - **link** / **channel** / **group**: choose where recaps go. There is one default chat and
   an optional chat per session that overrides it.
   - `link --session <SID>` lists the default, this session's chat and the known chats

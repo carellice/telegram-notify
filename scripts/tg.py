@@ -7,6 +7,7 @@ Standard library only. Commands:
   on|off [--session S|--global] enable/disable recaps
   send --session S [--file P ...] [--html] [--text T]   (text also from stdin)
   test [--session S]           send a test message
+  help                         list the /telegram commands
   link [--chat ID] [--session S] [--reset]
                                set the default chat, or this session's chat
   hook-prompt | hook-stop      used by the plugin hooks (JSON on stdin)
@@ -433,6 +434,44 @@ def cmd_send(args):
     return 1 if errors else 0
 
 
+COMMANDS = [
+    ("Setup", [
+        ("/telegram setup", "First-time setup: link your bot and chat"),
+        ("/telegram status", "Show configuration, mode and target chat"),
+        ("/telegram test", "Send a test message"),
+    ]),
+    ("Send", [
+        ("/telegram", "Send a recap of the work so far now"),
+        ("/telegram <note>", "Recap now, focused on the note (e.g. attach the screenshot)"),
+    ]),
+    ("Automatic recaps", [
+        ("/telegram on", "Recap after every prompt in this session"),
+        ("/telegram off", "Stop recaps in this session (even when global is on)"),
+        ("/telegram on global", "Recap after every prompt in every session"),
+        ("/telegram off global", "Turn global recaps off"),
+    ]),
+    ("Chats", [
+        ("/telegram link", "List chats and set the default one"),
+        ("/telegram link session", "Use another chat for this session only"),
+        ("/telegram link session reset", "This session goes back to the default chat"),
+    ]),
+    ("Help", [
+        ("/telegram help", "Show this list"),
+    ]),
+]
+
+
+def cmd_help(args):
+    width = max(len(c) for _, cmds in COMMANDS for c, _ in cmds)
+    for i, (group, cmds) in enumerate(COMMANDS):
+        if i:
+            print()
+        print(group)
+        for c, desc in cmds:
+            print("  {}  {}".format(c.ljust(width), desc))
+    return 0
+
+
 def cmd_test(args):
     cfg = load_config(args.session)
     if not cfg:
@@ -534,6 +573,7 @@ def main():
     s.add_argument("--html", action="store_true")
     s = sub.add_parser("test")
     s.add_argument("--session")
+    sub.add_parser("help")
     s = sub.add_parser("link")
     s.add_argument("--chat")
     s.add_argument("--session")
@@ -551,7 +591,7 @@ def main():
             return 0
     handlers = {
         "setup": cmd_setup, "status": cmd_status, "send": cmd_send, "test": cmd_test,
-        "link": cmd_link,
+        "link": cmd_link, "help": cmd_help,
         "on": lambda a: cmd_toggle(a, True), "off": lambda a: cmd_toggle(a, False),
     }
     if args.cmd not in handlers:
