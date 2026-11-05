@@ -7,6 +7,7 @@ Standard library only. Commands:
   on|off [--session S|--global] enable/disable recaps
   send --session S [--file P ...] [--html] [--text T]   (text also from stdin)
   test                         send a test message
+  link [--chat ID]             send recaps to another chat (group, channel)
   hook-prompt | hook-stop      used by the plugin hooks (JSON on stdin)
 """
 
@@ -225,43 +226,100 @@ def cmd_setup(args):
         pass
 
     print("3. Open https://t.me/{} and send it any message (e.g. /start).".format(bot))
+    print("   For a group or channel: add the bot there and post a message.")
     print("   Waiting up to 3 minutes...")
-    chat = None
-    deadline = time.time() + 180
-    while time.time() < deadline and not chat:
+    chat = wait_for_chat(token, offset)
+    if not chat:
+        print("No message received. Run setup again.")
+        return 1
+    save_chat(token, chat)
+    print("Setup complete.")
+    return 0
+
+
+def update_chat(u):
+    """Chat from a private message, group/channel post or the bot being added to a chat."""
+    for key in ("message", "channel_post", "my_chat_member"):
+        if u.get(key) and u[key].get("chat"):
+            return u[key]["chat"]
+    return None
+
+
+def chat_name(chat):
+    return chat.get("title") or " ".join(
+        x for x in (chat.get("first_name"), chat.get("last_name")) if x) or chat.get("username", "")
+
+
+def wait_for_chat(token, offset, seconds=180):
+    allowed = '["message","channel_post","my_chat_member"]'
+    deadline = time.time() + seconds
+    while time.time() < deadline:
         try:
-            ups = api_call(token, "getUpdates", {"timeout": 25, "offset": offset}, timeout=40)
+            ups = api_call(token, "getUpdates", {"timeout": 25, "offset": offset,
+                                                 "allowed_updates": allowed}, timeout=40)
         except Exception as e:
             print("getUpdates error: {}".format(e))
             time.sleep(3)
             continue
         for u in ups:
             offset = u["update_id"] + 1
-            msg = u.get("message") or u.get("channel_post")
-            if msg and msg.get("chat"):
-                chat = msg["chat"]
-                break
-    if not chat:
-        print("No message received. Run setup again.")
-        return 1
-    # confirm offset so the update is not returned again
-    try:
-        api_call(token, "getUpdates", {"timeout": 0, "offset": offset})
-    except Exception:
-        pass
+            chat = update_chat(u)
+            if chat:
+                # confirm offset so the update is not returned again
+                try:
+                    api_call(token, "getUpdates", {"timeout": 0, "offset": offset})
+                except Exception:
+                    pass
+                return chat
+    return None
 
-    name = chat.get("title") or " ".join(
-        x for x in (chat.get("first_name"), chat.get("last_name")) if x) or chat.get("username", "")
+
+def save_chat(token, chat):
     cfg = {"token": token, "chat_id": str(chat["id"])}
+    send_text(cfg, "telegram-notify linked. Claude Code recaps will arrive here.")
     write_json(config_path(), cfg)
     try:
         os.chmod(config_path(), 0o600)
     except Exception:
         pass
-    send_text(cfg, "telegram-notify configured. Claude Code recaps will arrive here.")
-    print("Chat linked: {} ({})".format(name, chat["id"]))
-    print("Config saved to {}".format(config_path()))
-    print("Test message sent. Setup complete.")
+    print("Chat linked: {} ({}, {})".format(chat_name(chat), chat.get("type", "?"), chat["id"]))
+    print("Config saved to {}. Test message sent.".format(config_path()))
+
+
+def cmd_link(args):
+    """Point recaps at another chat (private, group or channel) without re-entering the token."""
+    cfg = load_config()
+    if not cfg:
+        print("Not configured. Run setup first.")
+        return 1
+    token = cfg["token"]
+    if args.chat:
+        chat = api_call(token, "getChat", {"chat_id": args.chat})
+        save_chat(token, chat)
+        return 0
+    # list chats the bot has seen recently
+    seen = {}
+    try:
+        for u in api_call(token, "getUpdates", {"timeout": 0, "allowed_updates":
+                                                '["message","channel_post","my_chat_member"]'}):
+            chat = update_chat(u)
+            if chat:
+                seen[chat["id"]] = chat
+    except Exception as e:
+        print("getUpdates error: {}".format(e))
+    if seen:
+        print("Chats seen by the bot (current chat_id: {}):".format(cfg["chat_id"]))
+        for c in seen.values():
+            print("  {}  {}  {}".format(c["id"], c.get("type", "?"), chat_name(c)))
+        print("Link one with: link --chat <id>")
+        return 0
+    print("No chats seen yet. Add the bot to the group/channel and post a message there.")
+    print("Waiting up to 3 minutes...")
+    chat = wait_for_chat(token, 0)
+    if not chat:
+        print("No message received.")
+        return 1
+    save_chat(token, chat)
     return 0
 
 
@@ -432,6 +490,8 @@ def main():
     s.add_argument("--text")
     s.add_argument("--html", action="store_true")
     sub.add_parser("test")
+    s = sub.add_parser("link")
+    s.add_argument("--chat")
     sub.add_parser("hook-prompt")
     sub.add_parser("hook-stop")
     args = p.parse_args()
@@ -445,6 +505,7 @@ def main():
             return 0
     handlers = {
         "setup": cmd_setup, "status": cmd_status, "send": cmd_send, "test": cmd_test,
+        "link": cmd_link,
         "on": lambda a: cmd_toggle(a, True), "off": lambda a: cmd_toggle(a, False),
     }
     if args.cmd not in handlers:

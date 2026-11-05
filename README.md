@@ -53,6 +53,13 @@ Config lives in `~/.claude/telegram-notify/config.json`. The environment variabl
 | `/telegram on global` / `off global` | Recap after every prompt in every session |
 | `/telegram status` | Show configuration and mode |
 | `/telegram test` | Send a test message |
+| `/telegram link` | Send recaps to a group or channel instead of your private chat |
+
+### Groups and channels
+
+Add the bot to the group or channel. In a channel it must be an admin with "Post messages".
+Post any message there, then run `/telegram link` and pick the chat. Run it again to switch
+back to your private chat.
 
 A session setting wins over the global one: `/telegram off` mutes one session while global
 mode stays on for the others.

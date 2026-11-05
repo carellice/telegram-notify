@@ -1,7 +1,7 @@
 ---
 name: telegram
-description: Send Claude Code recaps, links and attachments to the user's Telegram. Use for /telegram, "send me this on Telegram", "mandamelo su Telegram", or to turn automatic Telegram recaps on/off for this session or globally. Subcommands - setup, on, on global, off, off global, status, test, or no argument to send a recap now.
-argument-hint: "[setup | on [global] | off [global] | status | test | <note>]"
+description: Send Claude Code recaps, links and attachments to the user's Telegram. Use for /telegram, "send me this on Telegram", "mandamelo su Telegram", to turn automatic Telegram recaps on/off for this session or globally, or to send recaps to a Telegram group or channel. Subcommands - setup, on, on global, off, off global, status, test, link, or no argument to send a recap now.
+argument-hint: "[setup | on [global] | off [global] | status | test | link | <note>]"
 ---
 
 # telegram-notify
@@ -33,6 +33,11 @@ tell the user setup is needed and continue with **setup**.
   Claude Code session on this computer sends a recap after each prompt.
 - **status**: run `status --session <SID>` and report in one or two lines.
 - **test**: run `test`.
+- **link** / **channel** / **group**: send recaps to another chat. Run `link` to list the chats
+  the bot has seen (id, type, name). If more than one fits, ask the user which. Then run
+  `link --chat <id>`; it sends a test message there and saves it. If none is listed, `link`
+  waits up to 3 minutes: tell the user to add the bot to the group or channel (in a channel
+  as admin with "Post messages") and post a message there. `@channelusername` also works as id.
 - **no argument, or a note**: send a recap now (see section 3) of the work done so far in this
   conversation. A note after `/telegram` says what to focus on or what to attach.
 
