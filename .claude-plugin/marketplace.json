@@ -1,0 +1,14 @@
+{
+  "name": "telegram-notify",
+  "description": "Telegram notifications for Claude Code",
+  "owner": {
+    "name": "Flavio Cecca"
+  },
+  "plugins": [
+    {
+      "name": "telegram-notify",
+      "source": "./",
+      "description": "Get Claude Code recaps, links and attachments on Telegram: on demand or after every prompt."
+    }
+  ]
+}
