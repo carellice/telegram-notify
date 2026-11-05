@@ -1,7 +1,7 @@
 {
   "name": "telegram-notify",
   "displayName": "Telegram Notify",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Get Claude Code recaps, links and attachments on Telegram: on demand or after every prompt.",
   "author": {
     "name": "Flavio Cecca"
@@ -14,5 +14,6 @@
     "mobile"
   ],
   "homepage": "https://github.com/carellice/telegram-notify",
-  "repository": "https://github.com/carellice/telegram-notify"
+  "repository": "https://github.com/carellice/telegram-notify",
+  "icon": "./assets/icon.png"
 }

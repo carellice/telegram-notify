@@ -1,4 +1,12 @@
-# telegram-notify
+<p align="center">
+  <img src="assets/icon.png" alt="telegram-notify icon" width="180">
+</p>
+
+<h1 align="center">telegram-notify</h1>
+
+<p align="center">
+  Claude Code recaps, links and attachments, straight to your Telegram.
+</p>
 
 A Claude Code plugin that sends recaps of Claude's work to your Telegram, with links and
 attachments. Use it on demand, or turn it on so a recap arrives after every prompt.
