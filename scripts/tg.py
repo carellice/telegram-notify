@@ -6,8 +6,9 @@ Standard library only. Commands:
   status [--session S]         show configuration and mode
   on|off [--session S|--global] enable/disable recaps
   send --session S [--file P ...] [--html] [--text T]   (text also from stdin)
-  test                         send a test message
-  link [--chat ID]             send recaps to another chat (group, channel)
+  test [--session S]           send a test message
+  link [--chat ID] [--session S] [--reset]
+                               set the default chat, or this session's chat
   hook-prompt | hook-stop      used by the plugin hooks (JSON on stdin)
 """
 
@@ -75,13 +76,25 @@ def write_json(path, data):
     os.replace(tmp, path)
 
 
-def load_config():
+def load_config(sid=None):
+    """Token and target chat: the session's own chat if set, else the default."""
     cfg = read_json(config_path(), {})
     token = os.environ.get("TELEGRAM_BOT_TOKEN") or cfg.get("token")
     chat_id = os.environ.get("TELEGRAM_CHAT_ID") or cfg.get("chat_id")
+    if sid and load_session(sid).get("chat_id"):
+        chat_id = load_session(sid)["chat_id"]
     if token and chat_id:
         return {"token": token, "chat_id": str(chat_id)}
     return None
+
+
+def known_chats():
+    return read_json(config_path(), {}).get("chats", {})
+
+
+def chat_label(chat_id):
+    c = known_chats().get(str(chat_id))
+    return "{} ({})".format(c["name"], chat_id) if c else str(chat_id)
 
 
 def load_session(sid):
@@ -274,16 +287,30 @@ def wait_for_chat(token, offset, seconds=180):
     return None
 
 
-def save_chat(token, chat):
-    cfg = {"token": token, "chat_id": str(chat["id"])}
-    send_text(cfg, "telegram-notify linked. Claude Code recaps will arrive here.")
+def save_chat(token, chat, sid=None):
+    """Test-send to chat, then make it the default (or this session's chat when sid is given)."""
+    chat_id = str(chat["id"])
+    where = "this session" if sid else "default"
+    send_text({"token": token, "chat_id": chat_id},
+              "telegram-notify linked ({}). Claude Code recaps will arrive here.".format(where))
+    cfg = read_json(config_path(), {})
+    cfg["token"] = token
+    if sid:
+        st = load_session(sid)
+        st["chat_id"] = chat_id
+        save_session(sid, st)
+    else:
+        cfg["chat_id"] = chat_id
+    # remember names so `link` can list chats after Telegram drops old updates
+    cfg.setdefault("chats", {})[chat_id] = {"name": chat_name(chat), "type": chat.get("type", "?")}
     write_json(config_path(), cfg)
     try:
         os.chmod(config_path(), 0o600)
     except Exception:
         pass
-    print("Chat linked: {} ({}, {})".format(chat_name(chat), chat.get("type", "?"), chat["id"]))
-    print("Config saved to {}. Test message sent.".format(config_path()))
+    print("Chat linked as {}: {} ({}, {})".format(
+        where, chat_name(chat), chat.get("type", "?"), chat_id))
+    print("Test message sent.")
 
 
 def cmd_link(args):
@@ -293,25 +320,39 @@ def cmd_link(args):
         print("Not configured. Run setup first.")
         return 1
     token = cfg["token"]
+    if args.reset:
+        if not args.session:
+            print("--reset needs --session ID")
+            return 1
+        st = load_session(args.session)
+        st.pop("chat_id", None)
+        save_session(args.session, st)
+        print("Session chat cleared. Recaps go to the default: {}".format(chat_label(cfg["chat_id"])))
+        return 0
     if args.chat:
         chat = api_call(token, "getChat", {"chat_id": args.chat})
-        save_chat(token, chat)
+        save_chat(token, chat, args.session)
         return 0
-    # list chats the bot has seen recently
-    seen = {}
+    # list chats linked before plus chats the bot has seen recently
+    chats = {cid: dict(c, id=cid) for cid, c in known_chats().items()}
     try:
         for u in api_call(token, "getUpdates", {"timeout": 0, "allowed_updates":
                                                 '["message","channel_post","my_chat_member"]'}):
             chat = update_chat(u)
             if chat:
-                seen[chat["id"]] = chat
+                chats[str(chat["id"])] = {"id": str(chat["id"]), "name": chat_name(chat),
+                                          "type": chat.get("type", "?")}
     except Exception as e:
         print("getUpdates error: {}".format(e))
-    if seen:
-        print("Chats seen by the bot (current chat_id: {}):".format(cfg["chat_id"]))
-        for c in seen.values():
-            print("  {}  {}  {}".format(c["id"], c.get("type", "?"), chat_name(c)))
-        print("Link one with: link --chat <id>")
+    print("Default chat: {}".format(chat_label(cfg["chat_id"])))
+    if args.session:
+        sc = load_session(args.session).get("chat_id")
+        print("This session: {}".format(chat_label(sc) if sc else "uses the default"))
+    if chats:
+        print("Known chats:")
+        for c in chats.values():
+            print("  {}  {}  {}".format(c["id"], c.get("type", "?"), c.get("name", "")))
+        print("Link one with: link --chat <id> [--session ID]")
         return 0
     print("No chats seen yet. Add the bot to the group/channel and post a message there.")
     print("Waiting up to 3 minutes...")
@@ -319,7 +360,7 @@ def cmd_link(args):
     if not chat:
         print("No message received.")
         return 1
-    save_chat(token, chat)
+    save_chat(token, chat, args.session)
     return 0
 
 
@@ -331,11 +372,13 @@ def cmd_status(args):
         "global": os.path.exists(global_flag()),
     }
     if cfg:
-        out["chat_id"] = cfg["chat_id"]
+        out["default_chat"] = chat_label(cfg["chat_id"])
         out["token"] = cfg["token"][:6] + "..." + cfg["token"][-4:]
     if args.session:
-        out["session_mode"] = load_session(args.session).get("mode") or "default"
+        st = load_session(args.session)
+        out["session_mode"] = st.get("mode") or "default"
         out["enabled_here"] = is_enabled(args.session)
+        out["session_chat"] = chat_label(st["chat_id"]) if st.get("chat_id") else "default"
     print(json.dumps(out, indent=2))
     return 0
 
@@ -361,7 +404,7 @@ def cmd_toggle(args, on):
 
 
 def cmd_send(args):
-    cfg = load_config()
+    cfg = load_config(args.session)
     if not cfg:
         print("Not configured. Run setup first.")
         return 1
@@ -391,12 +434,12 @@ def cmd_send(args):
 
 
 def cmd_test(args):
-    cfg = load_config()
+    cfg = load_config(args.session)
     if not cfg:
         print("Not configured. Run setup first.")
         return 1
     send_text(cfg, "telegram-notify test message.")
-    print("Sent.")
+    print("Sent to {}.".format(chat_label(cfg["chat_id"])))
     return 0
 
 
@@ -489,9 +532,12 @@ def main():
     s.add_argument("--file", action="append")
     s.add_argument("--text")
     s.add_argument("--html", action="store_true")
-    sub.add_parser("test")
+    s = sub.add_parser("test")
+    s.add_argument("--session")
     s = sub.add_parser("link")
     s.add_argument("--chat")
+    s.add_argument("--session")
+    s.add_argument("--reset", action="store_true")
     sub.add_parser("hook-prompt")
     sub.add_parser("hook-stop")
     args = p.parse_args()

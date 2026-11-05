@@ -1,7 +1,7 @@
 ---
 name: telegram
 description: Send Claude Code recaps, links and attachments to the user's Telegram. Use for /telegram, "send me this on Telegram", "mandamelo su Telegram", to turn automatic Telegram recaps on/off for this session or globally, or to send recaps to a Telegram group or channel. Subcommands - setup, on, on global, off, off global, status, test, link, or no argument to send a recap now.
-argument-hint: "[setup | on [global] | off [global] | status | test | link | <note>]"
+argument-hint: "[setup | on [global] | off [global] | status | test | link [session [reset]] | <note>]"
 ---
 
 # telegram-notify
@@ -32,12 +32,17 @@ tell the user setup is needed and continue with **setup**.
 - **on global** / **off global**: `on --global` / `off --global`. Global mode means every
   Claude Code session on this computer sends a recap after each prompt.
 - **status**: run `status --session <SID>` and report in one or two lines.
-- **test**: run `test`.
-- **link** / **channel** / **group**: send recaps to another chat. Run `link` to list the chats
-  the bot has seen (id, type, name). If more than one fits, ask the user which. Then run
-  `link --chat <id>`; it sends a test message there and saves it. If none is listed, `link`
-  waits up to 3 minutes: tell the user to add the bot to the group or channel (in a channel
-  as admin with "Post messages") and post a message there. `@channelusername` also works as id.
+- **test**: run `test --session <SID>`.
+- **link** / **channel** / **group**: choose where recaps go. There is one default chat and
+  an optional chat per session that overrides it.
+  - `link --session <SID>` lists the default, this session's chat and the known chats
+    (id, type, name). If more than one fits, ask the user which.
+  - `link --chat <id>` sets the **default** chat for every session.
+  - `link session` (or "only this session", "solo questa sessione"): `link --chat <id> --session <SID>`.
+  - `link session reset`: `link --session <SID> --reset`, back to the default.
+  Each link sends a test message to the chat first. If no chat is listed, `link` waits up to
+  3 minutes: tell the user to add the bot to the group or channel (in a channel as admin with
+  "Post messages") and post a message there. `@channelusername` also works as id.
 - **no argument, or a note**: send a recap now (see section 3) of the work done so far in this
   conversation. A note after `/telegram` says what to focus on or what to attach.
 
