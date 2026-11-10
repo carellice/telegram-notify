@@ -53,8 +53,19 @@ After `on`/`off`, confirm in one line. Do not send a recap for the `/telegram` t
 
 ## 3. Writing and sending a recap
 
-- User's language. Plain text, at most ~15 lines: what was done, the result, what is pending
-  or needs the user. Add useful links (PRs, deployed URLs, artifacts) in full.
+- User's language. Plain text. One message per project worked on: send the command once
+  per project. Format of each message:
+
+  ```
+  <Project name>
+  - <thing done>
+  - <thing done>
+  - Da fare: <pending item, only if any>
+  <GitHub link (commit, PR, release), only if any>
+  ```
+
+  Short list items, no prose. Links in full. Work not tied to a project: one message
+  with a fitting title.
 - Attach files the user would want on the phone: screenshots, generated images, reports,
   built packages. Max 50 MB each. Skip source files unless asked.
 - Never include secrets, tokens, passwords or `.env` contents.
