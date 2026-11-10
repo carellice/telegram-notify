@@ -53,11 +53,11 @@ After `on`/`off`, confirm in one line. Do not send a recap for the `/telegram` t
 
 ## 3. Writing and sending a recap
 
-- User's language. Plain text. One message per project worked on: send the command once
+- User's language. Send with `--html`; escape `&`, `<`, `>` in the text as `&amp;`, `&lt;`, `&gt;`. One message per project worked on: send the command once
   per project. Format of each message:
 
   ```
-  <Project name>
+  <b>Project name</b>
   - <thing done>
   - <thing done>
   - Da fare: <pending item, only if any>
@@ -72,7 +72,7 @@ After `on`/`off`, confirm in one line. Do not send a recap for the `/telegram` t
 - Send:
 
 ```bash
-sh "${CLAUDE_PLUGIN_ROOT}/scripts/run.sh" send --session <SID> --file "path/one.png" <<'EOF'
+sh "${CLAUDE_PLUGIN_ROOT}/scripts/run.sh" send --session <SID> --html --file "path/one.png" <<'EOF'
 <recap text>
 EOF
 ```

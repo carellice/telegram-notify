@@ -522,12 +522,12 @@ def cmd_hook_prompt(args):
         "telegram-notify recaps are ON for this session (session_id={sid}). The user wants, "
         "after the work for this prompt is finished, a Telegram recap in the user's "
         "language. Send ONE message per project worked on, each formatted as: the project "
-        "name on the first line, then a short '- ' list of what was done (plus '- ' pending "
+        "name in bold (<b>Name</b>) on the first line, then a short '- ' list of what was done (plus '- ' pending "
         "items if any), then GitHub links (commit, PR, release) if any. No prose. Files "
         "worth having on the phone (images, reports, builds) go as attachments. Send as "
         "the last step, once per project, with:\n"
-        "{cmd} send --session {sid} [--file PATH ...] <<'EOF'\n<recap text>\nEOF\n"
-        "Plain text; never include secrets. If the user asks not to send a "
+        "{cmd} send --session {sid} --html [--file PATH ...] <<'EOF'\n<recap text>\nEOF\n"
+        "Telegram HTML: escape & < > in the text as &amp; &lt; &gt;; never include secrets. If the user asks not to send a "
         "recap for this prompt, none is sent.".format(sid=sid, cmd=script_cmd()))
     return 0
 
